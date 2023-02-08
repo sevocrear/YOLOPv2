@@ -83,8 +83,15 @@ class YOLOPv2():
         input_image = input_image / 255.0
         
         # Inference
-        results = self.session.run(None, {self.input_name: input_image})
+        results = self.session.run(None, {self.input_name: input_image}) # pred, anch1, anch2, anch3, seg, ll
 
+        #PyTorch inference
+        model = torch.jit.load("data/weights/yolopv2.pt")
+        model.eval()
+        with torch.no_grad():
+            [pred, anchors], seg, ll = model(torch.from_numpy(input_image).to(torch.device('cuda')))
+        np.testing.assert_array_almost_equal(pred[0].cpu(), results[0][0], decimal = 5)
+        
         det_out = self.split_for_trace_model(results[0])
         
         boxes, confidences, classIds = [], [], []

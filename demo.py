@@ -85,6 +85,7 @@ def detect():
 
         # Apply NMS
         t3 = time_synchronized()
+        print(pred.shape)
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
         t4 = time_synchronized()
 
