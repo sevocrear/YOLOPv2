@@ -17,7 +17,7 @@ from utils.utils import \
 def make_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='data/weights/yolopv2.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='data/example.jpg', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--source', type=str, default='data/demo/fs2.jpg', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.3, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
@@ -118,7 +118,7 @@ def detect():
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
-                    if save_img :  # Add bbox to image
+                    if save_img :  # Add bbox to imagez
                         plot_one_box(xyxy, im0, line_thickness=3)
 
             # Print time (inference)
