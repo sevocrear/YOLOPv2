@@ -1,0 +1,5 @@
+.env*
+data/weights/*
+*.png
+runs/*
+*__pycache__*

@@ -137,7 +137,9 @@ model : trained on the BDD100k dataset and test on T3CAIC camera.
 
 You can get the model from <a href="https://github.com/CAIC-AD/YOLOPv2/releases/download/V0.0.1/yolopv2.pt">here</a>.
 
-
+```
+wget https://github.com/CAIC-AD/YOLOPv2/releases/download/V0.0.1/yolopv2.pt -O data/weights/yolopv2.pt
+```
 ### Demo Test
 
 We provide two testing method.You can store the image or video.
