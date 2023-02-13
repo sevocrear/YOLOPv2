@@ -6,7 +6,7 @@ import os
 def make_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default='data/weights/yolopv2.pt', help='model.pt path')
-    parser.add_argument('--onnx', type=str, default='data/weights/', help='ONNX output path')
+    parser.add_argument('--onnx', type=str, default='data/graphs/', help='ONNX output path')
     parser.add_argument('--width', type=int, default=640, help='input width')
     parser.add_argument('--height', type=int, default=384, help='input height')
     return parser
