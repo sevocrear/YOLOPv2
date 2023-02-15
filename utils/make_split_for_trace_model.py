@@ -38,8 +38,8 @@ class Model(nn.Module):
 
 def make_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--width', type=int, default=384, help='image width')
-    parser.add_argument('--height', type=int, default=640, help='image height')
+    parser.add_argument('--width', type=int, default=640, help='image width')
+    parser.add_argument('--height', type=int, default=384, help='image height')
     return parser
 
 if __name__ == "__main__":
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     model.to(DEVICE)
     H = opt.height
     W = opt.width
-    if [W, H] in RESOLUTION:
+    if [H, W] in RESOLUTION:
         pred = [
             torch.ones([1,255,H//8,W//8], dtype=torch.float32).to(DEVICE),
             torch.ones([1,255,H//16,W//16], dtype=torch.float32).to(DEVICE),

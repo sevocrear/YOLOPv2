@@ -18,7 +18,6 @@ def load_torch_model():
     # Load model
     model  = torch.jit.load(opt.weights)
     model = model.cpu()
-    model.eval()
     return model
 
 def convert_2_onnx(model):
@@ -36,9 +35,9 @@ def convert_2_onnx(model):
         output_names=['pred','anchor_grid0','anchor_grid1','anchor_grid2','seg','ll'],
         do_constant_folding=False,
     )
-    model_onnx = onnx.load(os.path.join(opt.onnx,onnx_file))
-    onnx.checker.check_model(model_onnx)
-    model_onnx1 = onnx.shape_inference.infer_shapes(model_onnx)
+    model_onnx1 = onnx.load(os.path.join(opt.onnx,onnx_file))
+    onnx.checker.check_model(model_onnx1)
+    model_onnx1 = onnx.shape_inference.infer_shapes(model_onnx1)
     onnx.save(model_onnx1, os.path.join(opt.onnx,onnx_file))
     print(f'ONNX is saved on path {os.path.join(opt.onnx,onnx_file)}')
     
