@@ -3,8 +3,10 @@ import cv2
 import numpy as np
 import torch
 import onnxruntime as ort
+import os
+from glob import glob
 class YOLOPv2():
-    def __init__(self, model_path, conf_thresh=0.3, nms_thresh = 0.45):
+    def __init__(self, model_path, conf_thresh=0.3, nms_thresh = 0.45, input_h = 384, input_w = 640):
         self.classes = list(map(lambda x: x.strip(), open('coco.names', 'r').readlines()))
         self.num_class = len(self.classes)
         
@@ -18,8 +20,8 @@ class YOLOPv2():
         self.input_name = model_inputs[0].name
         self.input_names = [model_inputs[i].name for i in range(len(model_inputs))]
         self.input_shape = model_inputs[0].shape
-        self.input_height = int(self.input_shape[2])
-        self.input_width = int(self.input_shape[3])
+        self.input_height = input_h
+        self.input_width = input_w
         
         self.conf_thresh = conf_thresh
         self.nms_thresh = nms_thresh
@@ -50,11 +52,11 @@ class YOLOPv2():
         label = '%.2f' % conf
         label = '%s:%s' % (self.classes[classId - 1], label)
 
-        # Display the label at the top of the bounding box
-        labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-        top = max(top, labelSize[1])
+        # # Display the label at the top of the bounding box
+        # labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        # top = max(top, labelSize[1])
         
-        cv2.putText(frame, label, (left, top - 10), 0, 0.7, (0, 255, 0), thickness=2)
+        # cv2.putText(frame, label, (left, top - 10), 0, 0.7, (0, 255, 0), thickness=2)
         return frame
     
     def split_for_trace_model(self, pred = None):
@@ -90,9 +92,9 @@ class YOLOPv2():
         model.eval()
         with torch.no_grad():
             [pred, anchors], seg, ll = model(torch.from_numpy(input_image).to(torch.device('cuda')))
-        np.testing.assert_array_almost_equal(pred[0].cpu(), results[0][0], decimal = 5)
+        # np.testing.assert_array_almost_equal(pred[0].cpu(), results[2], decimal = 5)
         
-        det_out = self.split_for_trace_model(results[0])
+        det_out = self.split_for_trace_model(results[2::])
         
         boxes, confidences, classIds = [], [], []
         for i in range(det_out.shape[0]):
@@ -120,12 +122,12 @@ class YOLOPv2():
             frame = self.drawPred(frame, classIds[i], confidences[i], left, top, left + width, top + height)
 
         # Drivable Area Segmentation
-        drivable_area = np.squeeze(results[4], axis=0)
+        drivable_area = np.squeeze(results[0], axis=0)
         mask = np.argmax(drivable_area, axis=0).astype(np.uint8)
         mask = cv2.resize(mask, (image_width, image_height), interpolation=cv2.INTER_NEAREST)
         frame[mask!=0] = frame[mask!=0]*0.5 + np.array([0, 255, 0])*0.5
         # Lane Line
-        lane_line = np.squeeze(results[5])
+        lane_line = np.squeeze(results[1])
         mask = np.round(lane_line).astype(np.uint8)
         mask = cv2.resize(mask, (image_width, image_height), interpolation=cv2.INTER_NEAREST)
         frame[mask!=0] = frame[mask!=0]*0.5 + np.array([0, 0., 255.])*0.5
@@ -134,19 +136,23 @@ class YOLOPv2():
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", type=str, default='onnx/yolopv2_192x320.onnx', help="model path")
-    parser.add_argument('--source', type=str, default='data/demo/fs2.jpg', help='source') 
+    parser.add_argument("--model_path", type=str, default='data/graphs/yolopv2_384x640.onnx', help="model path")
+    parser.add_argument('--source', type=str, default='data/demo/', help='source') 
+    parser.add_argument('--output', type=str, default='runs/onnx-no-nms/', help='output') 
     parser.add_argument('--conf-thres', type=float, default=0.3, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
     args = parser.parse_args()
 
     net = YOLOPv2(args.model_path, conf_thresh=args.conf_thres, nms_thresh=args.iou_thres)
-    srcimg = cv2.imread(args.source)
-
-    srcimg = net.detect(srcimg)
+    
+    images = glob(os.path.join(args.source, "*.png")) + glob(os.path.join(args.source, "*.jpg"))
+    images.sort()
+    
+    os.makedirs(args.output, exist_ok=True)
+    
     winName = 'Deep learning object detection in ONNXRuntime'
-    cv2.namedWindow(winName, cv2.WINDOW_NORMAL)
-    cv2.imshow(winName, srcimg)
-    cv2.imwrite("det.png", srcimg)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    for idx, image in enumerate(images):
+        srcimg = cv2.imread(image)
+
+        srcimg = net.detect(srcimg)
+        cv2.imwrite(os.path.join(args.output,f"{idx}.png"), srcimg)

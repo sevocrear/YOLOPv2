@@ -9,6 +9,10 @@ HEIGHT=384
 BATCHES=1
 CLASSES=80
 
+IOU_THRESH=0.45
+SCORE_THRESH=0.3
+MAX_NUM=30
+
 python3 utils/set_boxes_var.py --width ${WIDTH} --height ${HEIGHT} > /tmp/PARAM_LIST
 PARAM_LIST=$(</tmp/PARAM_LIST)
 HWBOX=(`echo ${PARAM_LIST[i]}`)
@@ -16,6 +20,13 @@ BOXES=${HWBOX[0]}
 BOXES1=${HWBOX[0]}
 BOXES2=${HWBOX[1]}
 BOXES3=${HWBOX[2]}
+
+
+# Get the model pt
+## Get the model from <a href="https://github.com/CAIC-AD/YOLOPv2/releases/download/V0.0.1/yolopv2.pt">here</a>.
+
+
+wget https://github.com/CAIC-AD/YOLOPv2/releases/download/V0.0.1/yolopv2.pt -O data/weights/yolopv2.pt
 
 
 # Convert torch pt to ONNX without NMS and Split for trace
@@ -105,7 +116,7 @@ sbi4onnx \
 python3 utils/make_split_for_trace_model.py --width ${WIDTH} --height ${HEIGHT}
 
 
-It will generate onnx-file in graphs dir.
+# It will generate onnx-file in graphs dir.
 
 # Make Boxes Scores ONNX
 
@@ -135,18 +146,18 @@ sog4onnx \
     --opset ${OPSET} \
     --op_name max_output_boxes_per_class_const \
     --output_variables max_output_boxes_per_class int64 [1] \
-    --attributes value int64 [20] \
+    --attributes value int64 [${MAX_NUM}] \
     --output_onnx_file_path data/graphs/Constant_max_output_boxes_per_class.onnx
 
 
-## Generate constant - iou_threshold (default 0.5)
+## Generate constant - iou_threshold (default 0.45)
 
 sog4onnx \
     --op_type Constant \
     --opset ${OPSET} \
     --op_name iou_threshold_const \
     --output_variables iou_threshold float32 [1] \
-    --attributes value float32 [0.5] \
+    --attributes value float32 [${IOU_THRESH}] \
     --output_onnx_file_path data/graphs/Constant_iou_threshold.onnx
 
 
@@ -157,7 +168,7 @@ sog4onnx \
     --opset ${OPSET} \
     --op_name score_threshold_const \
     --output_variables score_threshold float32 [1] \
-    --attributes value float32 [0.3] \
+    --attributes value float32 [${SCORE_THRESH}] \
     --output_onnx_file_path data/graphs/Constant_score_threshold.onnx
 
 
@@ -608,3 +619,8 @@ sor4onnx \
     --output_onnx_file_path data/graphs/yolopv2_split_Nx3x${HEIGHT}x${WIDTH}.onnx
 onnxsim data/graphs/yolopv2_split_Nx3x${HEIGHT}x${WIDTH}.onnx data/graphs/yolopv2_split_Nx3x${HEIGHT}x${WIDTH}.onnx
 onnxsim data/graphs/yolopv2_split_Nx3x${HEIGHT}x${WIDTH}.onnx data/graphs/yolopv2_split_Nx3x${HEIGHT}x${WIDTH}.onnx
+
+
+# Cleaning
+
+rm -rf data/saved_model_postprocess

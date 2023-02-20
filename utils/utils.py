@@ -453,7 +453,7 @@ class LoadImages:  # for inference
             #print(f'image {self.count}/{self.nf} {path}: ', end='')
 
         # Padded resize
-        img0 = cv2.resize(img0, (1280,720), interpolation=cv2.INTER_LINEAR)
+        # img0 = cv2.resize(img0, (1280,720), interpolation=cv2.INTER_LINEAR)
         img = letterbox(img0, self.img_size, stride=self.stride)[0]
 
         # Convert
@@ -508,14 +508,14 @@ def letterbox(img, new_shape=(640, 640), color=(114, 114, 114), auto=True, scale
 
 def driving_area_mask(seg = None):
     da_predict = seg[:, :, 12:372,:]
-    da_seg_mask = torch.nn.functional.interpolate(da_predict, scale_factor=2, mode='bilinear')
-    _, da_seg_mask = torch.max(da_seg_mask, 1)
+    # da_seg_mask = torch.nn.functional.interpolate(da_predict, scale_factor=2, mode='bilinear')
+    _, da_seg_mask = torch.max(da_predict, 1)
     da_seg_mask = da_seg_mask.int().squeeze().cpu().numpy()
     return da_seg_mask
 
 def lane_line_mask(ll = None):
     ll_predict = ll[:, :, 12:372,:]
-    ll_seg_mask = torch.nn.functional.interpolate(ll_predict, scale_factor=2, mode='bilinear')
-    ll_seg_mask = torch.round(ll_seg_mask).squeeze(1)
+    # ll_seg_mask = torch.nn.functional.interpolate(ll_predict, scale_factor=2, mode='bilinear')
+    ll_seg_mask = torch.round(ll_predict).squeeze(1)
     ll_seg_mask = ll_seg_mask.int().squeeze().cpu().numpy()
     return ll_seg_mask

@@ -44,7 +44,7 @@ def convert_2_onnx(model):
 if __name__ == '__main__':
     opt =  make_parser().parse_args()
     print(opt)
-    
+    os.makedirs(opt.onnx, exist_ok=True)
     model = load_torch_model()
     
     convert_2_onnx(model)

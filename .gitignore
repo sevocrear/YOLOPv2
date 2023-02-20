@@ -1,5 +1,7 @@
-.env*
+venv*
 data/weights/*
 *.png
 runs/*
 *__pycache__*
+*.avi
+*.onnx

@@ -7,11 +7,10 @@ import argparse
 import cv2 as cv
 import numpy as np
 import onnxruntime
-
-
+from glob import glob
+import os
 def run_inference(onnx_session, input_size, image, score_th=0.5):
     image_width, image_height = image.shape[1], image.shape[0]
-
     # Pre process:Resize, BGR->RGB, float32 cast
     input_image = cv.resize(image, dsize=(input_size[1], input_size[0]))
     input_image = cv.cvtColor(input_image, cv.COLOR_BGR2RGB)
@@ -56,7 +55,6 @@ def run_inference(onnx_session, input_size, image, score_th=0.5):
 
         if score_th > score:
             continue
-
         y1 = batchno_classid_y1x1y2x2_[-4]
         x1 = batchno_classid_y1x1y2x2_[-3]
         y2 = batchno_classid_y1x1y2x2_[-2]
@@ -101,7 +99,9 @@ def main():
 
     parser.add_argument("--device", type=int, default=None)
     parser.add_argument("--movie", type=str, default=None)
-    parser.add_argument("--image", type=str, default=None)
+    parser.add_argument("--image", type=str, default=None, help="Single image path")
+    parser.add_argument("--images", type=str, default="data/demo/")
+    parser.add_argument("--output", type=str, default="runs/onnx/")
     parser.add_argument(
         "--model",
         type=str,
@@ -122,13 +122,20 @@ def main():
     # Initialize video capture
     cap_device = args.device
     input = 'video'
+    os.makedirs(args.output, exist_ok= True)
     if args.movie is not None:
         cap_device = args.movie
     if cap_device:
         cap = cv.VideoCapture(cap_device)
-    else:
+    elif args.images:
+        input = 'images'
+        images = glob(os.path.join(args.images, '*.png')) + glob(os.path.join(args.images, '*.jpg'))
+        images.sort()
+        images = iter(images)
+    elif args.image:
         input = 'image'
-
+    else:
+        exit()
     # Load model
     onnx_session = onnxruntime.InferenceSession(
         model_path,
@@ -143,19 +150,25 @@ def main():
             if not ret:
                 break
             debug_image = infer(frame, input_size, onnx_session, start_time)
-        else:
+        elif input == 'image':
             frame = cv.imread(args.image, cv.IMREAD_UNCHANGED)
             start_time = time.time()
             _ = infer(frame, input_size, onnx_session, start_time)
             start_time = time.time()
             debug_image = infer(frame, input_size, onnx_session, start_time)
-            cv.imwrite('yolo_onnx_pos.png', debug_image)
+            cv.imwrite(os.path.join(args.output, f"{len(glob(os.path.join(args.output, '*.png')))}.png"), debug_image)
             break
+        elif input == 'images':
+            frame = cv.imread(next(images), cv.IMREAD_UNCHANGED)
+            start_time = time.time()
+            debug_image = infer(frame, input_size, onnx_session, start_time)
+            print(f"infered {len(glob(os.path.join(args.output, '*.png')))}")
+            cv.imwrite(os.path.join(args.output, f"{len(glob(os.path.join(args.output, '*.png')))}.png"), debug_image)
 
-        key = cv.waitKey(1)
-        if key == 27:  # ESC
-            break
-        cv.imshow('YOLOP v2', debug_image)
+        # key = cv.waitKey(1)
+        # if key == 27:  # ESC
+        #     break
+        # cv.imshow('YOLOP v2', debug_image)
     if input == 'video':
         cap.release()
         cv.destroyAllWindows()
@@ -183,15 +196,15 @@ def draw_debug(
         x1, y1 = int(bbox[0]), int(bbox[1])
         x2, y2 = int(bbox[2]), int(bbox[3])
 
-        cv.rectangle(debug_image, (x1, y1), (x2, y2), (255, 255, 0), 2)
-        cv.putText(debug_image, '%d:%.2f' % (class_id, score), (x1, y1 - 5), 0,
-                   0.7, (255, 255, 0), 2)
+        cv.rectangle(debug_image, (x1, y1), (x2, y2), [0,255,255], thickness=2, lineType=cv.LINE_AA)
+        # cv.putText(debug_image, '%d:%.2f' % (class_id, score), (x1, y1 - 5), 0,
+        #            0.7, (255, 255, 0), 2)
 
     # Inference elapsed time
-    cv.putText(debug_image,
-               "Elapsed Time : " + '{:.1f}'.format(elapsed_time * 1000) + "ms",
-               (10, 30), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1,
-               cv.LINE_AA)
+    # cv.putText(debug_image,
+    #            "Elapsed Time : " + '{:.1f}'.format(elapsed_time * 1000) + "ms",
+    #            (10, 30), cv.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1,
+    #            cv.LINE_AA)
 
     return debug_image
 

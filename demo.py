@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 import cv2
 import torch
-
+import os
 # Conclude setting / general reprocessing / plots / metrices / datasets
 from utils.utils import \
     time_synchronized,select_device, increment_path,\
@@ -17,7 +17,7 @@ from utils.utils import \
 def make_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', nargs='+', type=str, default='data/weights/yolopv2.pt', help='model.pt path(s)')
-    parser.add_argument('--source', type=str, default='data/demo/fs2.jpg', help='source')  # file/folder, 0 for webcam
+    parser.add_argument('--source', type=str, default='data/demo/example.jpg', help='source')  # file/folder, 0 for webcam
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.3, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
@@ -64,6 +64,7 @@ def detect():
     if device.type != 'cpu':
         model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
     t0 = time.time()
+    idx = 0
     for path, img, im0s, vid_cap in dataset:
         img = torch.from_numpy(img).to(device)
         img = img.half() if half else img.float()  # uint8 to fp16/32
@@ -85,7 +86,6 @@ def detect():
 
         # Apply NMS
         t3 = time_synchronized()
-        print(pred.shape)
         pred = non_max_suppression(pred, opt.conf_thres, opt.iou_thres, classes=opt.classes, agnostic=opt.agnostic_nms)
         t4 = time_synchronized()
 
@@ -98,7 +98,7 @@ def detect():
             p, s, im0, frame = path, '', im0s, getattr(dataset, 'frame', 0)
 
             p = Path(p)  # to Path
-            save_path = str(save_dir / p.name)  # img.jpg
+            save_path = os.path.join(str(save_dir), f"{idx}.png") # img.jpg
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # img.txt
             s += '%gx%g ' % img.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
@@ -146,6 +146,7 @@ def detect():
                             save_path += '.mp4'
                         vid_writer = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                     vid_writer.write(im0)
+        idx+=1
 
     inf_time.update(t2-t1,img.size(0))
     nms_time.update(t4-t3,img.size(0))
